@@ -148,10 +148,10 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <!-- Parent Username -->
                     <div class="space-y-2">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Parent / Player Name</label>
+                        <label for="player-name" class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Your Name</label>
                         <div class="relative">
                             <i class="fas fa-user-shield absolute left-3.5 top-3.5 text-slate-400"></i>
-                            <input type="text" id="player-name" value="Best Parent" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <input type="text" id="player-name" value="" placeholder="Type your name here" maxlength="30" autocomplete="off" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400">
                         </div>
                     </div>
 
@@ -201,13 +201,11 @@
                 </div>
             </div>
 
-            <div class="flex justify-between items-center px-1">
+            <div class="px-1 space-y-1">
                 <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                    <i class="fas fa-users text-amber-500"></i> Children Setup & Photos
+                    <i class="fas fa-users text-amber-500"></i> Your Children
                 </h3>
-                <button onclick="autoFillDemoPhotos()" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-800/50 transition flex items-center gap-1.5">
-                    <i class="fas fa-magic"></i> Auto-Fill Demo Avatars
-                </button>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Type each child's name, then tap a square to add their photo. No photo? They'll get a fun picture instead.</p>
             </div>
 
             <div id="kids-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -216,6 +214,7 @@
 
             <!-- Start Game CTA Button -->
             <div class="pt-4 text-center">
+                <p id="setup-error" class="hidden mb-3 text-sm font-bold text-rose-600 dark:text-rose-400" role="alert"></p>
                 <button onclick="startGame()" class="w-full sm:w-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-slate-900 font-extrabold text-lg shadow-lg shadow-amber-500/25 transform active:scale-95 transition-all duration-150 flex items-center justify-center gap-3 mx-auto">
                     <i class="fas fa-play text-slate-900"></i> Start Household Showdown!
                 </button>
@@ -498,7 +497,7 @@
             document.documentElement.classList.toggle('dark');
         }
 
-        const defaultNames = ["Timmy", "Sarah", "Leo", "Maya", "Lucas", "Emma"];
+        const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         const avatarColors = [
             ['#f87171', '#ef4444'], ['#60a5fa', '#3b82f6'], ['#34d399', '#10b981'],
             ['#fbbf24', '#f59e0b'], ['#c084fc', '#a855f7'], ['#f472b6', '#ec4899']
@@ -519,7 +518,7 @@
                 <rect width="300" height="300" rx="40" fill="url(#grad${index}_${picNum})" />
                 <circle cx="150" cy="130" r="70" fill="white" fill-opacity="0.25" />
                 <text x="150" y="150" font-size="80" text-anchor="middle" dominant-baseline="central">${emoji}</text>
-                <text x="150" y="240" font-family="sans-serif" font-weight="900" font-size="28" fill="white" text-anchor="middle">${name}</text>
+                <text x="150" y="240" font-family="sans-serif" font-weight="900" font-size="28" fill="white" text-anchor="middle">${esc(name)}</text>
             </svg>`;
             return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
         }
@@ -561,36 +560,38 @@
 
             let html = '';
             for (let i = 0; i < numKids; i++) {
-                const defaultName = existingKids[i]?.name || defaultNames[i % defaultNames.length];
+                const name = existingKids[i]?.name || '';
                 const photos = [];
 
+                // null = no photo yet; a fun picture is made for it when the game starts
                 for (let p = 0; p < picsPerKid; p++) {
-                    photos.push(existingKids[i]?.photos[p] || generateSvgAvatar(defaultName, i, p));
+                    photos.push(existingKids[i]?.photos[p] || null);
                 }
 
-                gameState.kids.push({ id: `kid_${i}`, name: defaultName, photos: photos });
+                gameState.kids.push({ id: `kid_${i}`, name, photos });
 
                 html += `
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700/70 shadow-sm space-y-3">
                     <div class="flex items-center gap-2">
-                        <span class="w-6 h-6 rounded-full bg-amber-400 text-slate-900 text-xs font-black flex items-center justify-center">${i + 1}</span>
-                        <input type="text" value="${defaultName}" onchange="updateKidName(${i}, this.value)" placeholder="Child's Name" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        <span class="w-6 h-6 shrink-0 rounded-full bg-amber-400 text-slate-900 text-xs font-black flex items-center justify-center">${i + 1}</span>
+                        <input type="text" id="kid-name-${i}" value="${esc(name)}" oninput="updateKidName(${i}, this.value)" placeholder="Type name here" maxlength="20" autocomplete="off" aria-label="Child ${i + 1}'s name" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm font-bold text-slate-800 dark:text-slate-100 placeholder:font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400">
                     </div>
 
                     <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Card Photos (${picsPerKid})</label>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Photos (${picsPerKid})</span>
                         <div class="grid grid-cols-${picsPerKid > 3 ? '4' : '3'} gap-2">
                 `;
 
                 for (let p = 0; p < picsPerKid; p++) {
                     html += `
-                    <div class="relative group aspect-square rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col items-center justify-center">
-                        <img id="thumb_${i}_${p}" src="${photos[p]}" class="w-full h-full object-cover">
-                        <label class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold cursor-pointer p-1 text-center">
-                            <i class="fas fa-camera text-sm mb-1"></i> Crop / Change
-                            <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, ${i}, ${p})">
-                        </label>
-                    </div>
+                    <label class="relative aspect-square rounded-xl ${photos[p] ? 'border border-slate-200 dark:border-slate-700' : 'border-2 border-dashed border-amber-300 dark:border-amber-700 bg-amber-50/60 dark:bg-slate-900'} overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-amber-400 transition">
+                        ${photos[p]
+                            ? `<img src="${photos[p]}" alt="" class="w-full h-full object-cover">
+                               <span class="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-slate-900/70 text-white text-[10px] flex items-center justify-center"><i class="fas fa-pen"></i></span>`
+                            : `<i class="fas fa-camera text-amber-500 text-lg"></i>
+                               <span class="text-[10px] font-bold text-amber-700 dark:text-amber-400 mt-1">Add photo</span>`}
+                        <input type="file" accept="image/*" class="hidden" aria-label="Add a photo for child ${i + 1}" onchange="handleImageUpload(event, ${i}, ${p})">
+                    </label>
                     `;
                 }
 
@@ -605,26 +606,13 @@
         }
 
         function updateKidName(kidIndex, newName) {
-            gameState.kids[kidIndex].name = newName || `Child ${kidIndex + 1}`;
-            // If avatars were SVGs, update their text dynamically
-            for (let p = 0; p < gameState.picsPerKid; p++) {
-                if (gameState.kids[kidIndex].photos[p].startsWith('data:image/svg+xml')) {
-                    gameState.kids[kidIndex].photos[p] = generateSvgAvatar(gameState.kids[kidIndex].name, kidIndex, p);
-                    const thumb = document.getElementById(`thumb_${kidIndex}_${p}`);
-                    if (thumb) thumb.src = gameState.kids[kidIndex].photos[p];
-                }
-            }
+            gameState.kids[kidIndex].name = newName.trim();
+            document.getElementById(`kid-name-${kidIndex}`)?.classList.remove('ring-2', 'ring-rose-400');
         }
 
-        function autoFillDemoPhotos() {
-            for (let i = 0; i < gameState.kids.length; i++) {
-                for (let p = 0; p < gameState.picsPerKid; p++) {
-                    const avatar = generateSvgAvatar(gameState.kids[i].name, i, p);
-                    gameState.kids[i].photos[p] = avatar;
-                    const thumb = document.getElementById(`thumb_${i}_${p}`);
-                    if (thumb) thumb.src = avatar;
-                }
-            }
+        function showSetupError(msg) {
+            const e = document.getElementById('setup-error');
+            e.textContent = msg; e.classList.toggle('hidden', !msg);
         }
 
         function handleImageUpload(event, kidIndex, picIndex) {
@@ -760,14 +748,26 @@
             const { targetKidIndex, targetPicIndex } = cropState;
             gameState.kids[targetKidIndex].photos[targetPicIndex] = croppedDataUrl;
 
-            const thumb = document.getElementById(`thumb_${targetKidIndex}_${targetPicIndex}`);
-            if (thumb) thumb.src = croppedDataUrl;
-
             closeCropperModal();
+            renderKidSetupForms(); // shows the new photo in its square
         }
 
         function startGame() {
-            gameState.playerName = document.getElementById('player-name').value || "Best Parent";
+            // Every child needs a name; point at the first empty box instead of guessing one
+            const missing = gameState.kids.findIndex((k) => !k.name);
+            if (missing >= 0) {
+                const box = document.getElementById(`kid-name-${missing}`);
+                box.classList.add('ring-2', 'ring-rose-400');
+                box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                box.focus({ preventScroll: true });
+                showSetupError(`Type a name for child ${missing + 1} first.`);
+                return;
+            }
+            showSetupError('');
+            // No photo? Use a fun picture with their name on it
+            gameState.kids.forEach((kid, i) => { kid.playPhotos = kid.photos.map((ph, p) => ph || generateSvgAvatar(kid.name, i, p)); });
+
+            gameState.playerName = document.getElementById('player-name').value.trim() || "A loving parent";
             gameState.flipsCount = 0;
             gameState.matchedPairsCount = 0;
             gameState.timerSeconds = 0;
@@ -780,7 +780,7 @@
             let cardId = 0;
 
             gameState.kids.forEach((kid, kidIdx) => {
-                kid.photos.forEach((photoUrl, photoIdx) => {
+                kid.playPhotos.forEach((photoUrl, photoIdx) => {
                     // Create pair of identical cards
                     for (let pair = 0; pair < 2; pair++) {
                         gameState.cards.push({
@@ -843,7 +843,7 @@
 
                 html += `
                 <div class="px-3 py-2 rounded-xl ${isComplete ? 'bg-amber-400 text-slate-900 shadow-md font-bold' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200'} border border-slate-200 dark:border-slate-600 flex items-center justify-between text-xs transition-all">
-                    <span class="truncate font-semibold max-w-[80px]">${kid.name}</span>
+                    <span class="truncate font-semibold max-w-[80px]">${esc(kid.name)}</span>
                     <span class="font-black text-[11px]">${kidMatchedPairs}/${totalKidPairs} ${isComplete ? '👑' : ''}</span>
                 </div>
                 `;
@@ -879,7 +879,7 @@
                         <div class="backface-hidden rotate-y-180 absolute inset-0 bg-white dark:bg-slate-800 rounded-2xl border-2 ${card.isMatched ? 'border-emerald-400 dark:border-emerald-500' : 'border-amber-400'} overflow-hidden flex flex-col">
                             <img src="${card.photoUrl}" class="w-full h-full object-cover">
                             <div class="absolute bottom-0 inset-x-0 bg-slate-900/70 backdrop-blur-xs py-1 px-1.5 text-center">
-                                <p class="text-[10px] font-black text-white truncate leading-tight">${card.kidName}</p>
+                                <p class="text-[10px] font-black text-white truncate leading-tight">${esc(card.kidName)}</p>
                             </div>
                         </div>
 
@@ -1022,11 +1022,11 @@
                 <div class="p-3.5 rounded-2xl ${borderStyle} flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3">
                         <div class="w-12 h-12 rounded-xl overflow-hidden border border-slate-300/40 shrink-0 ${isLast ? 'filter grayscale brightness-75' : ''}">
-                            <img src="${kid.photos[0]}" class="w-full h-full object-cover">
+                            <img src="${kid.playPhotos[0]}" class="w-full h-full object-cover">
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <h4 class="font-black text-sm ${isLast ? 'text-slate-100' : 'text-slate-900 dark:text-white'}">${kid.name}</h4>
+                                <h4 class="font-black text-sm ${isLast ? 'text-slate-100' : 'text-slate-900 dark:text-white'}">${esc(kid.name)}</h4>
                             </div>
                             <p class="text-xs ${isLast ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400'} font-medium">${title}</p>
                         </div>
@@ -1086,7 +1086,7 @@
 
             // The favourite's photo in a gold circle
             const fav = ranked[0];
-            const photo = await loadImage(fav.photos[0]);
+            const photo = await loadImage(fav.playPhotos[0]);
             const cx = W / 2, cy = 380, r = 150;
             x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.closePath(); x.clip();
             if (photo) x.drawImage(photo, cx - r, cy - r, r * 2, r * 2);
