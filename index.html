@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Favourite Child</title>
+    <meta name="description" content="Match your kids' photos against the clock to find out, once and for all, who's the favourite child.">
+    <meta name="theme-color" content="#f59e0b">
+    <!-- Lets phones install this as an app with its own icon and name -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Favourite Child">
+    <!-- The picture and title WhatsApp shows under a link to the game -->
+    <meta property="og:title" content="The Favourite Child">
+    <meta property="og:description" content="Who's the favourite in your house? Match the photos to find out.">
+    <meta property="og:image" content="https://thespectrumtechengine.com/the-favourite-child/share.jpg">
+    <meta property="og:url" content="https://thespectrumtechengine.com/the-favourite-child/">
+    <meta property="og:type" content="website">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for playful icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        favorite: {
+                            50: '#fffbe1',
+                            100: '#fff3c2',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-short': 'bounce 0.5s ease-in-out 2',
+                        'float': 'float 3s ease-in-out infinite'
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-8px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+
+        h1, h2, h3, .font-heading {
+            font-family: 'Fredoka', cursive, sans-serif;
+        }
+
+        /* 3D Card Flip Styles */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(107, 114, 128, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
+
+    <header class="w-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 px-4 py-3">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="resetToSetup()">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center text-slate-900 font-black text-xl shadow-md">
+                    👑
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide leading-none text-slate-900 dark:text-white">
+                        The Favourite <span class="text-amber-500">Child</span>
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Settle the household debate forever</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button id="sound-toggle" onclick="toggleSound()" class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 transition" title="Toggle Sound">
+                    <i class="fas fa-volume-up text-lg" id="sound-icon"></i>
+                </button>
+                <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 transition" title="Toggle Dark Theme">
+                    <i class="fas fa-moon text-lg dark:hidden"></i>
+                    <i class="fas fa-sun text-lg hidden dark:block text-amber-400"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 flex flex-col justify-center">
+
+        <!-- SETUP SCREEN -->
+        <div id="setup-screen" class="space-y-6 max-w-4xl mx-auto w-full">
+            <div class="text-center space-y-2">
+                <span class="px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold tracking-wider uppercase">
+                    Family Showdown Mode
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">Who do you truly love the most?</h2>
+                <p class="text-slate-600 dark:text-slate-400 max-w-lg mx-auto text-sm sm:text-base">
+                    Configure your children, upload their standard or funny photos, and test your memory speed to reveal the official parenting hierarchy!
+                </p>
+            </div>
+
+            <!-- Global Settings Form -->
+            <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-7 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700/60 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <!-- Parent Username -->
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Parent / Player Name</label>
+                        <div class="relative">
+                            <i class="fas fa-user-shield absolute left-3.5 top-3.5 text-slate-400"></i>
+                            <input type="text" id="player-name" value="Best Parent" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        </div>
+                    </div>
+
+                    <!-- Number of Kids -->
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Number of Children</label>
+                        <select id="num-kids" onchange="renderKidSetupForms()" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <option value="2">2 Children</option>
+                            <option value="3" selected>3 Children</option>
+                            <option value="4">4 Children</option>
+                            <option value="5">5 Children</option>
+                            <option value="6">6 Children</option>
+                        </select>
+                    </div>
+
+                    <!-- Photos per Kid -->
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Pictures Per Child</label>
+                        <select id="pics-per-kid" onchange="renderKidSetupForms()" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <option value="1">1 Picture (2 cards / child)</option>
+                            <option value="2">2 Pictures (4 cards / child)</option>
+                            <option value="3" selected>3 Pictures (6 cards / child)</option>
+                            <option value="4">4 Pictures (8 cards / child)</option>
+                            <option value="5">5 Pictures (10 cards / child)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Difficulty Toggle & Math Summary -->
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-700/60 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Matching Mode:</span>
+                        <div class="inline-flex p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <button id="mode-easy-btn" onclick="setDifficulty('easy')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-amber-400 text-slate-900 shadow">
+                                🟢 Easy (Any Photo Match)
+                            </button>
+                            <button id="mode-hard-btn" onclick="setDifficulty('hard')" class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition flex items-center gap-1.5">
+                                🔴 Hard (Exact Pair Only)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Math Indicator -->
+                    <div id="math-indicator" class="w-full md:w-auto text-center md:text-right px-4 py-2 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200/60 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-xs font-bold">
+                        3 Kids × 3 Pictures × 2 Pairs = <span class="text-amber-600 dark:text-amber-400 text-sm font-extrabold">18 Total Cards</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center px-1">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <i class="fas fa-users text-amber-500"></i> Children Setup & Photos
+                </h3>
+                <button onclick="autoFillDemoPhotos()" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-800/50 transition flex items-center gap-1.5">
+                    <i class="fas fa-magic"></i> Auto-Fill Demo Avatars
+                </button>
+            </div>
+
+            <div id="kids-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Injected via JavaScript -->
+            </div>
+
+            <!-- Start Game CTA Button -->
+            <div class="pt-4 text-center">
+                <button onclick="startGame()" class="w-full sm:w-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-slate-900 font-extrabold text-lg shadow-lg shadow-amber-500/25 transform active:scale-95 transition-all duration-150 flex items-center justify-center gap-3 mx-auto">
+                    <i class="fas fa-play text-slate-900"></i> Start Household Showdown!
+                </button>
+            </div>
+        </div>
+
+        <div id="game-screen" class="hidden space-y-5">
+            <!-- Game Top Status Bar -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-lg border border-slate-100 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span id="active-player-display" class="font-bold text-slate-800 dark:text-slate-100">Best Parent</span>
+                    <span id="active-mode-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                        Easy Mode
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-6 text-sm font-bold">
+                    <div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                        <i class="fas fa-stopwatch text-amber-500"></i>
+                        <span id="timer-display">00:00</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                        <i class="fas fa-hand-pointer text-amber-500"></i>
+                        <span id="flips-display">0 Flips</span>
+                    </div>
+                    <button onclick="resetToSetup()" class="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition">
+                        <i class="fas fa-cog"></i> Setup
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Ranking Leaderboard Bar -->
+            <div class="bg-slate-100 dark:bg-slate-800/50 rounded-2xl p-3.5 border border-slate-200/60 dark:border-slate-700/50 space-y-2">
+                <div class="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <span>LIVE AFFECTION MATCHING PROGRESS</span>
+                    <span id="completion-percentage">0% Completed</span>
+                </div>
+                <div id="live-standings" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    <!-- Dynamic Live Child Cards -->
+                </div>
+            </div>
+
+            <!-- Memory Card Grid Canvas Area -->
+            <div id="cards-grid" class="grid gap-3 sm:gap-4 my-2">
+                <!-- Dynamically generated memory cards -->
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="py-6 px-4">
+        <img id="ste-logo" class="block w-[150px] max-w-[45%] h-auto mx-auto opacity-90" src="data:image/webp;base64,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" alt="Created By The Spectrum Tech Engine">
+    </footer>
+
+    <div id="cropper-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                <h3 class="text-lg font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-crop-alt text-amber-500"></i> Crop Child Photo
+                </h3>
+                <button onclick="closeCropperModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Drag to reposition, pinch/scroll or use slider to zoom so the picture fits the card shape perfectly!
+            </p>
+
+            <!-- Canvas Workspace -->
+            <div class="relative w-full aspect-square bg-slate-950 rounded-2xl overflow-hidden cursor-move flex items-center justify-center touch-none border-2 border-dashed border-amber-400/50" id="cropper-viewport">
+                <canvas id="cropper-canvas" class="absolute"></canvas>
+                <!-- Frame overlay box -->
+                <div class="absolute inset-0 border-2 border-amber-400 pointer-events-none rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"></div>
+            </div>
+
+            <!-- Controls (Zoom & Rotate) -->
+            <div class="space-y-3">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-search-minus text-slate-400 text-xs"></i>
+                    <input type="range" id="crop-zoom" min="0.2" max="3" step="0.01" value="1" oninput="updateCropCanvas()" class="w-full accent-amber-500">
+                    <i class="fas fa-search-plus text-slate-400 text-xs"></i>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    <div class="flex gap-2">
+                        <button onclick="rotateCropImage(-90)" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200">
+                            <i class="fas fa-undo"></i> -90°
+                        </button>
+                        <button onclick="rotateCropImage(90)" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200">
+                            <i class="fas fa-redo"></i> +90°
+                        </button>
+                        <button onclick="resetCropTransform()" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200">
+                            Reset
+                        </button>
+                    </div>
+
+                    <button onclick="saveCroppedImage()" class="px-5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-sm shadow transition">
+                        <i class="fas fa-check mr-1"></i> Apply Crop
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="victory-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-700 my-8 space-y-6">
+            
+            <div class="text-center space-y-1">
+                <div class="inline-block p-3 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-500 text-3xl mb-1 animate-bounce">
+                    🏆
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">Official Hierarchy Declared!</h2>
+                <p class="text-slate-500 dark:text-slate-400 text-sm">Based on scientific memory speed & parental devotion</p>
+            </div>
+
+            <!-- The Podium Rankings List -->
+            <div id="podium-list" class="space-y-3">
+                <!-- Injected via JavaScript -->
+            </div>
+
+            <!-- Printable Certificate Preview Card -->
+            <div id="printable-certificate" class="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-100 dark:from-slate-900 dark:to-amber-950/40 p-5 rounded-2xl border-2 border-dashed border-amber-300 dark:border-amber-700 text-center space-y-2 relative overflow-hidden">
+                <div class="text-xs font-black uppercase tracking-widest text-amber-800 dark:text-amber-300">Official Parental Decree</div>
+                <h3 id="cert-favorite-title" class="text-xl font-black text-slate-900 dark:text-amber-100">"Child Name" is The #1 Favourite Child</h3>
+                <p id="cert-details" class="text-xs text-slate-600 dark:text-slate-300 italic">
+                    Certified by Best Parent in 01:24 with 18 card flips.
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                <button onclick="shareCertificate()" class="flex-1 py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#1ebe5b] text-white font-extrabold text-sm transition flex items-center justify-center gap-2 shadow">
+                    <i class="fab fa-whatsapp text-lg"></i> Share on WhatsApp
+                </button>
+                <button onclick="resetToSetup()" class="flex-1 py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-sm transition flex items-center justify-center gap-2 shadow">
+                    <i class="fas fa-redo"></i> Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        /* State Variables */
+        let gameState = {
+            playerName: "Best Parent",
+            numKids: 3,
+            picsPerKid: 3,
+            difficulty: "easy", // 'easy' or 'hard'
+            kids: [], // Array of { id, name, photos: [base64 strings] }
+            cards: [],
+            flippedCards: [],
+            matchedPairsCount: 0,
+            totalPairs: 0,
+            flipsCount: 0,
+            timerSeconds: 0,
+            timerInterval: null,
+            isPlaying: false,
+            soundEnabled: true,
+            finishedKids: [] // Array tracking order of children completely matched
+        };
+
+        // Photo Cropper Transient State
+        let cropState = {
+            targetKidIndex: null,
+            targetPicIndex: null,
+            img: null,
+            scale: 1,
+            posX: 0,
+            posY: 0,
+            rotation: 0,
+            isDragging: false,
+            startX: 0,
+            startY: 0
+        };
+
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSound(type) {
+            if (!gameState.soundEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+
+                if (type === 'flip') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'match') {
+                    [523.25, 659.25, 783.99].forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                        gain.gain.setValueAtTime(0.2, now + idx * 0.06);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.25);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.06);
+                        osc.stop(now + idx * 0.06 + 0.25);
+                    });
+                } else if (type === 'wrong') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'child_cleared') {
+                    // Triumphant mini-fanfare when a specific child is completed
+                    [587.33, 739.99, 880, 1174.66].forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        gain.gain.setValueAtTime(0.25, now + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.35);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.08);
+                        osc.stop(now + idx * 0.08 + 0.35);
+                    });
+                } else if (type === 'victory') {
+                    // Full victory fanfare
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                        gain.gain.setValueAtTime(0.3, now + idx * 0.12);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.5);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.12);
+                        osc.stop(now + idx * 0.12 + 0.5);
+                    });
+                }
+            } catch (e) {
+                console.error("Audio error:", e);
+            }
+        }
+
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (gameState.soundEnabled) {
+                icon.className = 'fas fa-volume-up text-lg';
+            } else {
+                icon.className = 'fas fa-volume-mute text-lg text-rose-500';
+            }
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        const defaultNames = ["Timmy", "Sarah", "Leo", "Maya", "Lucas", "Emma"];
+        const avatarColors = [
+            ['#f87171', '#ef4444'], ['#60a5fa', '#3b82f6'], ['#34d399', '#10b981'],
+            ['#fbbf24', '#f59e0b'], ['#c084fc', '#a855f7'], ['#f472b6', '#ec4899']
+        ];
+
+        function generateSvgAvatar(name, index, picNum) {
+            const colors = avatarColors[index % avatarColors.length];
+            const emojis = ['👶', '🧒', '👧', '👦', '🎒', '🎨', '⚽', '🍦', '🎮', '🧩', '🚀', '⭐'];
+            const emoji = emojis[(index * 3 + picNum) % emojis.length];
+
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+                <defs>
+                    <linearGradient id="grad${index}_${picNum}" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:${colors[0]};stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:${colors[1]};stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <rect width="300" height="300" rx="40" fill="url(#grad${index}_${picNum})" />
+                <circle cx="150" cy="130" r="70" fill="white" fill-opacity="0.25" />
+                <text x="150" y="150" font-size="80" text-anchor="middle" dominant-baseline="central">${emoji}</text>
+                <text x="150" y="240" font-family="sans-serif" font-weight="900" font-size="28" fill="white" text-anchor="middle">${name}</text>
+            </svg>`;
+            return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        }
+
+        function setDifficulty(mode) {
+            gameState.difficulty = mode;
+            const easyBtn = document.getElementById('mode-easy-btn');
+            const hardBtn = document.getElementById('mode-hard-btn');
+
+            if (mode === 'easy') {
+                easyBtn.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-amber-400 text-slate-900 shadow";
+                hardBtn.className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition flex items-center gap-1.5";
+            } else {
+                hardBtn.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-rose-500 text-white shadow";
+                easyBtn.className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition flex items-center gap-1.5";
+            }
+        }
+
+        function updateMathIndicator() {
+            const numKids = parseInt(document.getElementById('num-kids').value);
+            const picsPerKid = parseInt(document.getElementById('pics-per-kid').value);
+            const totalCards = numKids * picsPerKid * 2;
+            const mathElement = document.getElementById('math-indicator');
+            mathElement.innerHTML = `${numKids} Kids × ${picsPerKid} Pictures × 2 Pairs = <span class="text-amber-600 dark:text-amber-400 text-sm font-extrabold">${totalCards} Total Cards</span>`;
+        }
+
+        function renderKidSetupForms() {
+            const numKids = parseInt(document.getElementById('num-kids').value);
+            const picsPerKid = parseInt(document.getElementById('pics-per-kid').value);
+            const container = document.getElementById('kids-container');
+
+            gameState.numKids = numKids;
+            gameState.picsPerKid = picsPerKid;
+            updateMathIndicator();
+
+            // Retain old values if existing
+            const existingKids = [...gameState.kids];
+            gameState.kids = [];
+
+            let html = '';
+            for (let i = 0; i < numKids; i++) {
+                const defaultName = existingKids[i]?.name || defaultNames[i % defaultNames.length];
+                const photos = [];
+
+                for (let p = 0; p < picsPerKid; p++) {
+                    photos.push(existingKids[i]?.photos[p] || generateSvgAvatar(defaultName, i, p));
+                }
+
+                gameState.kids.push({ id: `kid_${i}`, name: defaultName, photos: photos });
+
+                html += `
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700/70 shadow-sm space-y-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-amber-400 text-slate-900 text-xs font-black flex items-center justify-center">${i + 1}</span>
+                        <input type="text" value="${defaultName}" onchange="updateKidName(${i}, this.value)" placeholder="Child's Name" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Card Photos (${picsPerKid})</label>
+                        <div class="grid grid-cols-${picsPerKid > 3 ? '4' : '3'} gap-2">
+                `;
+
+                for (let p = 0; p < picsPerKid; p++) {
+                    html += `
+                    <div class="relative group aspect-square rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col items-center justify-center">
+                        <img id="thumb_${i}_${p}" src="${photos[p]}" class="w-full h-full object-cover">
+                        <label class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold cursor-pointer p-1 text-center">
+                            <i class="fas fa-camera text-sm mb-1"></i> Crop / Change
+                            <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, ${i}, ${p})">
+                        </label>
+                    </div>
+                    `;
+                }
+
+                html += `
+                        </div>
+                    </div>
+                </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function updateKidName(kidIndex, newName) {
+            gameState.kids[kidIndex].name = newName || `Child ${kidIndex + 1}`;
+            // If avatars were SVGs, update their text dynamically
+            for (let p = 0; p < gameState.picsPerKid; p++) {
+                if (gameState.kids[kidIndex].photos[p].startsWith('data:image/svg+xml')) {
+                    gameState.kids[kidIndex].photos[p] = generateSvgAvatar(gameState.kids[kidIndex].name, kidIndex, p);
+                    const thumb = document.getElementById(`thumb_${kidIndex}_${p}`);
+                    if (thumb) thumb.src = gameState.kids[kidIndex].photos[p];
+                }
+            }
+        }
+
+        function autoFillDemoPhotos() {
+            for (let i = 0; i < gameState.kids.length; i++) {
+                for (let p = 0; p < gameState.picsPerKid; p++) {
+                    const avatar = generateSvgAvatar(gameState.kids[i].name, i, p);
+                    gameState.kids[i].photos[p] = avatar;
+                    const thumb = document.getElementById(`thumb_${i}_${p}`);
+                    if (thumb) thumb.src = avatar;
+                }
+            }
+        }
+
+        function handleImageUpload(event, kidIndex, picIndex) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = new Image();
+                img.onload = function () {
+                    openCropperModal(img, kidIndex, picIndex);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function openCropperModal(img, kidIndex, picIndex) {
+            cropState.targetKidIndex = kidIndex;
+            cropState.targetPicIndex = picIndex;
+            cropState.img = img;
+            cropState.scale = 1;
+            cropState.posX = 0;
+            cropState.posY = 0;
+            cropState.rotation = 0;
+
+            document.getElementById('crop-zoom').value = 1;
+            document.getElementById('cropper-modal').classList.remove('hidden');
+
+            setupCropperEvents();
+            updateCropCanvas();
+        }
+
+        function closeCropperModal() {
+            document.getElementById('cropper-modal').classList.add('hidden');
+        }
+
+        function updateCropCanvas() {
+            const canvas = document.getElementById('cropper-canvas');
+            const viewport = document.getElementById('cropper-viewport');
+            const ctx = canvas.getContext('2d');
+
+            const size = viewport.clientWidth;
+            canvas.width = size;
+            canvas.height = size;
+
+            cropState.scale = parseFloat(document.getElementById('crop-zoom').value);
+
+            ctx.clearRect(0, 0, size, size);
+            ctx.save();
+
+            // Translate to center for rotation & scaling
+            ctx.translate(size / 2 + cropState.posX, size / 2 + cropState.posY);
+            ctx.rotate((cropState.rotation * Math.PI) / 180);
+            ctx.scale(cropState.scale, cropState.scale);
+
+            // Draw image centered
+            if (cropState.img) {
+                const imgAspect = cropState.img.width / cropState.img.height;
+                let drawW = size;
+                let drawH = size / imgAspect;
+                if (imgAspect < 1) {
+                    drawH = size;
+                    drawW = size * imgAspect;
+                }
+                ctx.drawImage(cropState.img, -drawW / 2, -drawH / 2, drawW, drawH);
+            }
+
+            ctx.restore();
+        }
+
+        function rotateCropImage(angle) {
+            cropState.rotation = (cropState.rotation + angle) % 360;
+            updateCropCanvas();
+        }
+
+        function resetCropTransform() {
+            cropState.scale = 1;
+            cropState.posX = 0;
+            cropState.posY = 0;
+            cropState.rotation = 0;
+            document.getElementById('crop-zoom').value = 1;
+            updateCropCanvas();
+        }
+
+        function setupCropperEvents() {
+            const viewport = document.getElementById('cropper-viewport');
+
+            const startDrag = (e) => {
+                cropState.isDragging = true;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                cropState.startX = clientX - cropState.posX;
+                cropState.startY = clientY - cropState.posY;
+            };
+
+            const doDrag = (e) => {
+                if (!cropState.isDragging) return;
+                e.preventDefault();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                cropState.posX = clientX - cropState.startX;
+                cropState.posY = clientY - cropState.startY;
+                updateCropCanvas();
+            };
+
+            const endDrag = () => {
+                cropState.isDragging = false;
+            };
+
+            viewport.onmousedown = startDrag;
+            window.onmousemove = doDrag;
+            window.onmouseup = endDrag;
+
+            viewport.ontouchstart = startDrag;
+            window.ontouchmove = doDrag;
+            window.ontouchend = endDrag;
+
+            viewport.onwheel = (e) => {
+                e.preventDefault();
+                let zoom = cropState.scale + (e.deltaY < 0 ? 0.05 : -0.05);
+                zoom = Math.min(Math.max(0.2, zoom), 3);
+                cropState.scale = zoom;
+                document.getElementById('crop-zoom').value = zoom;
+                updateCropCanvas();
+            };
+        }
+
+        function saveCroppedImage() {
+            const canvas = document.getElementById('cropper-canvas');
+            const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+            const { targetKidIndex, targetPicIndex } = cropState;
+            gameState.kids[targetKidIndex].photos[targetPicIndex] = croppedDataUrl;
+
+            const thumb = document.getElementById(`thumb_${targetKidIndex}_${targetPicIndex}`);
+            if (thumb) thumb.src = croppedDataUrl;
+
+            closeCropperModal();
+        }
+
+        function startGame() {
+            gameState.playerName = document.getElementById('player-name').value || "Best Parent";
+            gameState.flipsCount = 0;
+            gameState.matchedPairsCount = 0;
+            gameState.timerSeconds = 0;
+            gameState.flippedCards = [];
+            gameState.finishedKids = [];
+            gameState.isPlaying = true;
+
+            // Prepare cards array
+            gameState.cards = [];
+            let cardId = 0;
+
+            gameState.kids.forEach((kid, kidIdx) => {
+                kid.photos.forEach((photoUrl, photoIdx) => {
+                    // Create pair of identical cards
+                    for (let pair = 0; pair < 2; pair++) {
+                        gameState.cards.push({
+                            id: cardId++,
+                            kidIndex: kidIdx,
+                            kidName: kid.name,
+                            photoIndex: photoIdx,
+                            photoUrl: photoUrl,
+                            isFlipped: false,
+                            isMatched: false
+                        });
+                    }
+                });
+            });
+
+            // Shuffle cards using Fisher-Yates
+            for (let i = gameState.cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [gameState.cards[i], gameState.cards[j]] = [gameState.cards[j], gameState.cards[i]];
+            }
+
+            gameState.totalPairs = gameState.cards.length / 2;
+
+            // Render HUD and Cards
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+
+            document.getElementById('active-player-display').innerText = gameState.playerName;
+            document.getElementById('active-mode-badge').innerText = gameState.difficulty === 'easy' ? '🟢 Easy Mode' : '🔴 Hard Mode';
+            document.getElementById('flips-display').innerText = '0 Flips';
+            document.getElementById('timer-display').innerText = '00:00';
+
+            renderLiveStandings();
+            renderGameBoard();
+
+            // Start Timer
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            gameState.timerInterval = setInterval(() => {
+                gameState.timerSeconds++;
+                const mins = String(Math.floor(gameState.timerSeconds / 60)).padStart(2, '0');
+                const secs = String(gameState.timerSeconds % 60).padStart(2, '0');
+                document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function renderLiveStandings() {
+            const container = document.getElementById('live-standings');
+            let html = '';
+
+            const pct = Math.round((gameState.matchedPairsCount / gameState.totalPairs) * 100) || 0;
+            document.getElementById('completion-percentage').innerText = `${pct}% Cleared`;
+
+            gameState.kids.forEach((kid, idx) => {
+                // Calculate matches for this kid
+                const kidCards = gameState.cards.filter(c => c.kidIndex === idx);
+                const matchedCards = kidCards.filter(c => c.isMatched).length;
+                const totalKidPairs = (kid.photos.length * 2) / 2;
+                const kidMatchedPairs = matchedCards / 2;
+                const isComplete = kidMatchedPairs === totalKidPairs;
+
+                html += `
+                <div class="px-3 py-2 rounded-xl ${isComplete ? 'bg-amber-400 text-slate-900 shadow-md font-bold' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200'} border border-slate-200 dark:border-slate-600 flex items-center justify-between text-xs transition-all">
+                    <span class="truncate font-semibold max-w-[80px]">${kid.name}</span>
+                    <span class="font-black text-[11px]">${kidMatchedPairs}/${totalKidPairs} ${isComplete ? '👑' : ''}</span>
+                </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderGameBoard() {
+            const grid = document.getElementById('cards-grid');
+            const total = gameState.cards.length;
+
+            // Dynamic grid column sizing based on card count
+            let colClass = "grid-cols-4 sm:grid-cols-6";
+            if (total <= 12) colClass = "grid-cols-3 sm:grid-cols-4";
+            else if (total > 24) colClass = "grid-cols-4 sm:grid-cols-8";
+
+            grid.className = `grid ${colClass} gap-3 sm:gap-4 my-2`;
+
+            let html = '';
+            gameState.cards.forEach((card, index) => {
+                html += `
+                <div class="perspective-1000 aspect-square cursor-pointer" onclick="flipCard(${index})">
+                    <div id="card-inner-${index}" class="transform-style-3d relative w-full h-full rounded-2xl shadow-md ${card.isFlipped || card.isMatched ? 'rotate-y-180' : ''}">
+                        
+                        <!-- Card Back -->
+                        <div class="backface-hidden absolute inset-0 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 rounded-2xl border-2 border-white/60 dark:border-slate-700 flex flex-col items-center justify-center p-2 text-slate-900 shadow-inner">
+                            <span class="text-2xl sm:text-3xl">❓</span>
+                            <span class="text-[10px] font-black uppercase tracking-wider opacity-75 mt-1">Flip</span>
+                        </div>
+
+                        <!-- Card Front -->
+                        <div class="backface-hidden rotate-y-180 absolute inset-0 bg-white dark:bg-slate-800 rounded-2xl border-2 ${card.isMatched ? 'border-emerald-400 dark:border-emerald-500' : 'border-amber-400'} overflow-hidden flex flex-col">
+                            <img src="${card.photoUrl}" class="w-full h-full object-cover">
+                            <div class="absolute bottom-0 inset-x-0 bg-slate-900/70 backdrop-blur-xs py-1 px-1.5 text-center">
+                                <p class="text-[10px] font-black text-white truncate leading-tight">${card.kidName}</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                `;
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function flipCard(index) {
+            const card = gameState.cards[index];
+
+            if (!gameState.isPlaying || card.isFlipped || card.isMatched || gameState.flippedCards.length >= 2) {
+                return;
+            }
+
+            playSound('flip');
+            card.isFlipped = true;
+            gameState.flippedCards.push({ index, card });
+
+            const inner = document.getElementById(`card-inner-${index}`);
+            if (inner) inner.classList.add('rotate-y-180');
+
+            if (gameState.flippedCards.length === 2) {
+                gameState.flipsCount++;
+                document.getElementById('flips-display').innerText = `${gameState.flipsCount} Flips`;
+                checkCardMatch();
+            }
+        }
+
+        function checkCardMatch() {
+            const [c1, c2] = gameState.flippedCards;
+            let isMatch = false;
+
+            if (gameState.difficulty === 'easy') {
+                // Easy Mode: Match if same child
+                isMatch = (c1.card.kidIndex === c2.card.kidIndex);
+            } else {
+                // Hard Mode: Must match exact picture pair
+                isMatch = (c1.card.kidIndex === c2.card.kidIndex) && (c1.card.photoIndex === c2.card.photoIndex);
+            }
+
+            if (isMatch) {
+                // Match Found!
+                playSound('match');
+                c1.card.isMatched = true;
+                c2.card.isMatched = true;
+                gameState.matchedPairsCount++;
+                gameState.flippedCards = [];
+
+                checkChildCompletion(c1.card.kidIndex);
+                renderLiveStandings();
+
+                if (gameState.matchedPairsCount === gameState.totalPairs) {
+                    setTimeout(triggerVictory, 600);
+                }
+            } else {
+                // No Match
+                playSound('wrong');
+                setTimeout(() => {
+                    c1.card.isFlipped = false;
+                    c2.card.isFlipped = false;
+                    const inner1 = document.getElementById(`card-inner-${c1.index}`);
+                    const inner2 = document.getElementById(`card-inner-${c2.index}`);
+                    if (inner1) inner1.classList.remove('rotate-y-180');
+                    if (inner2) inner2.classList.remove('rotate-y-180');
+                    gameState.flippedCards = [];
+                }, 900);
+            }
+        }
+
+        function checkChildCompletion(kidIndex) {
+            const kidCards = gameState.cards.filter(c => c.kidIndex === kidIndex);
+            const allMatched = kidCards.every(c => c.isMatched);
+
+            if (allMatched && !gameState.finishedKids.includes(kidIndex)) {
+                gameState.finishedKids.push(kidIndex);
+                playSound('child_cleared');
+            }
+        }
+
+        function triggerVictory() {
+            clearInterval(gameState.timerInterval);
+            gameState.isPlaying = false;
+
+            playSound('victory');
+
+            // Trigger Confetti Burst
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+
+            renderVictoryModal();
+        }
+
+        function renderVictoryModal() {
+            const podiumList = document.getElementById('podium-list');
+            let html = '';
+
+            // Compute rankings based on gameState.finishedKids array order
+            const rankedKids = gameState.finishedKids.map(kidIdx => gameState.kids[kidIdx]);
+
+            // Add any remaining uncompleted kids if applicable
+            gameState.kids.forEach((kid, idx) => {
+                if (!gameState.finishedKids.includes(idx)) {
+                    rankedKids.push(kid);
+                }
+            });
+
+            const count = rankedKids.length;
+
+            rankedKids.forEach((kid, rankIdx) => {
+                const isFirst = rankIdx === 0;
+                const isLast = rankIdx === count - 1;
+
+                let title = `#${rankIdx + 1} Place`;
+                let borderStyle = "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800";
+                let badge = `<span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 font-black text-xs text-slate-600 dark:text-slate-300">#${rankIdx + 1}</span>`;
+
+                if (isFirst) {
+                    title = "🥇 THE FAVOURITE CHILD";
+                    borderStyle = "border-2 border-amber-400 bg-gradient-to-r from-amber-50 to-yellow-100 dark:from-amber-950/40 dark:to-slate-800 shadow-lg shadow-amber-500/10";
+                    badge = `<span class="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-900 font-black text-xs shadow">👑 #1 FAVOURITE</span>`;
+                } else if (rankIdx === 1) {
+                    title = "🥈 The Second Favourite";
+                    borderStyle = "border-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800";
+                } else if (isLast) {
+                    title = "💀 THE FORGOTTEN CHILD";
+                    borderStyle = "border-2 border-slate-800 dark:border-slate-900 bg-slate-900 text-white dark:bg-black";
+                    badge = `<span class="px-2.5 py-1 rounded-lg bg-rose-950 text-rose-300 font-black text-xs">🕸️ LAST PLACE</span>`;
+                }
+
+                html += `
+                <div class="p-3.5 rounded-2xl ${borderStyle} flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl overflow-hidden border border-slate-300/40 shrink-0 ${isLast ? 'filter grayscale brightness-75' : ''}">
+                            <img src="${kid.photos[0]}" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-black text-sm ${isLast ? 'text-slate-100' : 'text-slate-900 dark:text-white'}">${kid.name}</h4>
+                            </div>
+                            <p class="text-xs ${isLast ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400'} font-medium">${title}</p>
+                        </div>
+                    </div>
+                    <div>${badge}</div>
+                </div>
+                `;
+            });
+
+            podiumList.innerHTML = html;
+
+            // Certificate Text Setup
+            const favChildName = rankedKids[0].name;
+            const mins = String(Math.floor(gameState.timerSeconds / 60)).padStart(2, '0');
+            const secs = String(gameState.timerSeconds % 60).padStart(2, '0');
+
+            document.getElementById('cert-favorite-title').innerText = `🏆 "${favChildName}" is Officially The #1 Favourite Child!`;
+            gameState.lastRanking = rankedKids;
+            document.getElementById('cert-details').innerText = `Decreed by ${gameState.playerName} in ${mins}:${secs} with ${gameState.flipsCount} card flips (${gameState.difficulty.toUpperCase()} mode).`;
+
+            document.getElementById('victory-modal').classList.remove('hidden');
+        }
+
+        /* ---- Sharing the certificate on WhatsApp, with an invite to play ---- */
+        const GAME_URL = "https://thespectrumtechengine.com/the-favourite-child/";
+
+        function loadImage(src) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = src;
+            });
+        }
+
+        // Draws the certificate as a picture: the favourite's photo, the rankings, and an invite
+        async function makeCertificateImage() {
+            const ranked = gameState.lastRanking || gameState.kids;
+            const W = 1080, H = 1350;
+            const c = document.createElement('canvas');
+            c.width = W; c.height = H;
+            const x = c.getContext('2d');
+            try { await document.fonts.load('700 60px Fredoka'); } catch (e) {}
+            const heading = (size) => `700 ${size}px Fredoka, sans-serif`;
+            const body = (size, weight = 600) => `${weight} ${size}px Inter, sans-serif`;
+
+            // Background and border
+            const bg = x.createLinearGradient(0, 0, W, H);
+            bg.addColorStop(0, '#fffbeb'); bg.addColorStop(.55, '#ffedd5'); bg.addColorStop(1, '#fde68a');
+            x.fillStyle = bg; x.fillRect(0, 0, W, H);
+            x.setLineDash([22, 14]); x.lineWidth = 8; x.strokeStyle = '#f59e0b';
+            x.strokeRect(36, 36, W - 72, H - 72); x.setLineDash([]);
+            x.textAlign = 'center';
+
+            x.fillStyle = '#92400e'; x.font = body(34, 800);
+            x.fillText('OFFICIAL PARENTAL DECREE', W / 2, 108);
+
+            // The favourite's photo in a gold circle
+            const fav = ranked[0];
+            const photo = await loadImage(fav.photos[0]);
+            const cx = W / 2, cy = 380, r = 150;
+            x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.closePath(); x.clip();
+            if (photo) x.drawImage(photo, cx - r, cy - r, r * 2, r * 2);
+            x.restore();
+            x.lineWidth = 12; x.strokeStyle = '#f59e0b'; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+            x.font = '96px sans-serif'; x.fillText('👑', cx, cy - r + 14);
+
+            // Headline, shrunk to fit long names
+            x.fillStyle = '#0f172a';
+            let size = 84; x.font = heading(size);
+            while (x.measureText(fav.name).width > W - 160 && size > 40) { size -= 4; x.font = heading(size); }
+            x.fillText(fav.name, W / 2, 625);
+            x.font = heading(48); x.fillStyle = '#b45309';
+            x.fillText('is officially the #1 Favourite Child!', W / 2, 695);
+
+            // Rankings
+            const medals = ['🥇', '🥈', '🥉', '4th', '5th', '6th'];
+            let y = 790;
+            const many = ranked.length > 4, step = many ? 48 : 62;
+            ranked.forEach((kid, i) => {
+                const last = i === ranked.length - 1 && ranked.length > 2;
+                const label = last ? `💀  ${kid.name}, the forgotten child` : `${medals[i]}  ${kid.name}`;
+                x.font = body((i === 0 ? 44 : 38) - (many ? 6 : 0), i === 0 ? 800 : 600);
+                x.fillStyle = last ? '#475569' : '#1e293b';
+                x.fillText(label, W / 2, y);
+                y += step;
+            });
+
+            // Details, invite and logo
+            const mins = String(Math.floor(gameState.timerSeconds / 60)).padStart(2, '0');
+            const secs = String(gameState.timerSeconds % 60).padStart(2, '0');
+            x.font = body(30, 500); x.fillStyle = '#64748b';
+            x.fillText(`Decreed by ${gameState.playerName} in ${mins}:${secs} with ${gameState.flipsCount} flips`, W / 2, H - 270);
+            x.font = heading(40); x.fillStyle = '#92400e';
+            x.fillText("Who's the favourite in your house?", W / 2, H - 205);
+            x.font = body(30, 700); x.fillStyle = '#b45309';
+            x.fillText('thespectrumtechengine.com/the-favourite-child', W / 2, H - 160);
+            const logo = await loadImage(document.getElementById('ste-logo').src);
+            if (logo) { const lw = 480, lh = lw * logo.height / logo.width; x.drawImage(logo, (W - lw) / 2, H - 132, lw, lh); }
+
+            return new Promise((resolve) => c.toBlob(resolve, 'image/jpeg', 0.9));
+        }
+
+        function certificateMessage() {
+            const fav = (gameState.lastRanking || gameState.kids)[0].name;
+            return `👑 It's official: ${fav} is my #1 Favourite Child! 👑\n\n` +
+                   `Think you know who's the favourite in your house? Play The Favourite Child and find out:\n${GAME_URL}`;
+        }
+
+        // Share menu with the picture (pick WhatsApp); falls back to a WhatsApp message with the link
+        async function shareCertificate() {
+            const text = certificateMessage();
+            const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
+            // No share menu (most computers): open WhatsApp with the message and link straight away
+            if (!(navigator.share && navigator.canShare)) {
+                if (!window.open(waUrl, '_blank')) location.href = waUrl;
+                return;
+            }
+            let file = null;
+            try {
+                const blob = await makeCertificateImage();
+                if (blob) file = new File([blob], 'favourite-child-certificate.jpg', { type: 'image/jpeg' });
+            } catch (e) { console.warn(e); }
+            try {
+                if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], text });
+                    return;
+                }
+            } catch (e) {
+                if (e && e.name === 'AbortError') return; // they closed the share menu
+            }
+            try { await navigator.share({ text }); return; } // share menu without the picture
+            catch (e) { if (e && e.name === 'AbortError') return; }
+            location.href = waUrl;
+        }
+
+        function resetToSetup() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            document.getElementById('victory-modal').classList.add('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+        }
+
+        /* Initial Setup On Load */
+        window.onload = function () {
+            renderKidSetupForms();
+        };
+
+        // Lets the game open offline once it has been visited
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    </script>
+</body>
+</html>
