@@ -21,6 +21,8 @@
     <meta property="og:type" content="website">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Usage numbers and owner tools, shared by every Spectrum Tech Engine app -->
+    <script src="https://thespectrumtechengine.com/ste-owner.js" data-app="the-favourite-child" defer></script>
     <!-- FontAwesome for playful icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Canvas Confetti -->
@@ -774,6 +776,8 @@
             gameState.flippedCards = [];
             gameState.finishedKids = [];
             gameState.isPlaying = true;
+            ste('track', 'play'); ste('detail', 'mode-' + gameState.difficulty); ste('detail', gameState.kids.length + '-kids');
+            if (gameState.kids.some(k => k.photos.some(Boolean))) ste('detail', 'used-own-photos');
 
             // Prepare cards array
             gameState.cards = [];
@@ -968,6 +972,7 @@
             gameState.isPlaying = false;
 
             playSound('victory');
+            ste('detail', 'finished'); ste('value', 'flips', gameState.flipsCount); ste('value', 'seconds', gameState.timerSeconds);
 
             // Trigger Confetti Burst
             if (typeof confetti === 'function') {
@@ -1138,6 +1143,7 @@
 
         // Share menu with the picture (pick WhatsApp); falls back to a WhatsApp message with the link
         async function shareCertificate() {
+            ste('track', 'share');
             const text = certificateMessage();
             const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
             // No share menu (most computers): open WhatsApp with the message and link straight away
@@ -1169,6 +1175,9 @@
             document.getElementById('game-screen').classList.add('hidden');
             document.getElementById('setup-screen').classList.remove('hidden');
         }
+
+        // Usage numbers for the owner (ste-owner.js on the website); never gets in the way of the game
+        function ste(f, ...a) { try { if (window.STE && window.STE[f]) window.STE[f](...a); } catch (e) {} }
 
         /* Initial Setup On Load */
         window.onload = function () {
