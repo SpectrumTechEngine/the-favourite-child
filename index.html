@@ -893,7 +893,26 @@
             });
 
             grid.innerHTML = html;
+            gameState.boardCols = total <= 12 ? 4 : total > 24 ? 8 : 6; // the column count on screens 640px and wider
+            requestAnimationFrame(() => requestAnimationFrame(fitBoard));
         }
+
+        // On laptops and tablets, size the cards so every row fits on the screen (phones keep full-width cards)
+        function fitBoard() {
+            const grid = document.getElementById('cards-grid');
+            if (!grid || document.getElementById('game-screen').classList.contains('hidden')) return;
+            grid.style.maxWidth = ''; grid.style.marginLeft = grid.style.marginRight = '';
+            if (innerWidth < 640) return;
+            const cols = gameState.boardCols || 6;
+            const rows = Math.ceil(gameState.cards.length / cols);
+            const gap = parseFloat(getComputedStyle(grid).columnGap) || 16;
+            const top = grid.getBoundingClientRect().top + scrollY;
+            const avail = innerHeight - top - 24;
+            const cell = Math.max(70, (avail - gap * (rows - 1)) / rows);
+            const width = cell * cols + gap * (cols - 1);
+            if (width < grid.parentElement.clientWidth) { grid.style.maxWidth = width + 'px'; grid.style.marginLeft = grid.style.marginRight = 'auto'; }
+        }
+        addEventListener('resize', () => fitBoard());
 
         function flipCard(index) {
             const card = gameState.cards[index];
