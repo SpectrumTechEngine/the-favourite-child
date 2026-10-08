@@ -1,0 +1,10 @@
+{
+  "appId": "com.thespectrumtechengine.favouritechild",
+  "appName": "Favourite Child",
+  "webDir": "www",
+  "backgroundColor": "#0f0c29",
+  "server": {
+    "url": "https://thespectrumtechengine.com/the-favourite-child/",
+    "errorPath": "index.html"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "the-favourite-child-android",
+  "private": true,
+  "description": "Builds the Android APK for The Favourite Child. See README.md in this folder.",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}
